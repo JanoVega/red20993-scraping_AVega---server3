@@ -1,0 +1,13 @@
+name: scrapingEmpEnv
+channels:
+ - default
+ - conda-forge
+dependencies:
+ - requests
+ - numpy
+ - bs4
+ - pandas
+ - pip
+ - pip:
+   - selenium==4.2.0
+   - PyVirtualDisplay
