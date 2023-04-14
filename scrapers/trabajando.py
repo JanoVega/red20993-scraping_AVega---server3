@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.relative_locator import locate_with
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
+#from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 from selenium.webdriver.chrome.service import Service
 
 from utils.date_utils import get_date
@@ -132,13 +132,19 @@ def get_page_dynamic(url):
     """
     # abro chrome para extraer los datos de la oferta
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    #chrome_options.add_argument("--headless")
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        # espera hasta 1 seg a que aparesca un item de la página antes de extraer el html
+        # espera < 5 seg a que aparesca un item de la página antes de extraer el html
         driver.get(url)
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, 'offerHeader')))
+        WebDriverWait(driver, 5)\
+                        .until(EC.presence_of_element_located((By.ID, 'detalleOferta')))
+        html = driver.page_source
+    except Exception as e:
+        print(e)
+        print('no aparecio detalleOferta  en 5segs')
+        WebDriverWait(driver, 5)
         html = driver.page_source
     finally:
         driver.close()
@@ -164,32 +170,37 @@ def results(search_keyword):
     
     url = 'https://www.trabajando.cl/'
     get_to_page(driver, url, search_keyword)
-    
-    WebDriverWait(driver, 8)\
-        .until(EC.presence_of_element_located((By.ID, 'detalleOferta')))
-
+    try:
+        WebDriverWait(driver, 8)\
+        .until(EC.presence_of_element_located((By.ID, 'listadoOfertas')))
+   
+    except Exception as e:
+        print(e)
+        print('no aparecio listadoOfertas en 8s')
     # extraígo el html
     html = driver.page_source
     bs = BeautifulSoup(html,'html.parser')
-
+    
     # trato de extraer el número de resultados, 
     # si no funciona, "recargo la página"
     assert not bs.find_all('h2',{'class','h3 mx-auto'}),\
         'No hay ofertas de trabajo para tu búsqueda'
-
+        
     try:
         num_results = re.sub('[\D]', '',bs.find('span',{'class', \
                     'searched-results'})\
                         .text.split()[0] )
         num_results = int(num_results )
-    except:
+    except Exception as e :
+        print(e)
+        print('no aparecio numero de resultados')
         html = driver.page_source
         bs = BeautifulSoup(html,'html.parser')
         num_results = re.sub('[\D]', '',bs.find('span',{'class', \
                     'searched-results'})\
                         .text.split()[0] )
         num_results = int(num_results ) 
-
+        
     n = 0
     # fecha de la última vez que se ejecuto el main_scraper con este item
     try: 
@@ -219,7 +230,8 @@ def results(search_keyword):
             WebDriverWait(driver, 1)
             Click_more_results(driver)
         except Exception as e:
-            #print(e) , el error ocurre cuando no hayan mas cosos que sacar
+            print(e)# , el error ocurre cuando no hayan mas cosos que sacar
+            print('no se pudo hacer click para acceder a mas resultados')
             break
         Contador_ciclo += 1
         #print(len(results), '/', num_results)
@@ -227,7 +239,7 @@ def results(search_keyword):
        0
     finally:
         driver.quit()
-
+        
     retry_links = []
     retry_links_dates = []
     # itero sobre los links de ofertas extraídos 
@@ -241,7 +253,6 @@ def results(search_keyword):
                 continue
             #raspado
             scrape(url, search_keyword)
-            
             # recoleccion
             if str(date) == str(get_date('hoy')):
                 data_row = ['trabajando',\
@@ -253,11 +264,12 @@ def results(search_keyword):
                 
             n += 1
         except Exception as e:
-            #print(e)
+            print(e)
+            print('error al raspar la oferta')
             retry_links.append(result_url)
             retry_links_dates.append(date)
-            
-    failed_links = []
+
+        failed_links = []
     # intento de nuevo con los que no funcionaron
     for index, link in enumerate(retry_links):
         date = retry_links_dates[index]
@@ -316,30 +328,52 @@ def scrape(url, search_keyword):
     """
     bs = get_page_dynamic(url)
     # fecha
-    date = get_date(bs.find('span', {'class', 'd-block'}).text)
-
-    # para la primera oferta, cambian un par de detalles
-
-    title = bs.find('div',{'title offerHeader'}).find('h2').text
-    body =  body_cleanser(bs.find('div',{'description text-break'}))
 
     try:
-        publicador = bs.find('div',{'title offerHeader'}).find('a').text
-    except:
+        date = get_date(bs.find('span', {'class', 'd-block'}).text)
+    except Exception as e:
+        print(e)
+        print('no encontro la fecha')
+        date = '?'
+    try:
+        title = bs.find('div',{ 'title offerHeader'}).find('h2').text
+    except AttributeError as e:
+        title = bs.find('div',{ 'text'}).h3.text
+    else:
+        title = ''
+    try: 
+        body =  body_cleanser(bs.find('div',{'class', 'description text-break'}))
+    except Exception as e:
+        print(e)
+        print('no esta encontrando el cuerpo')
+        body = ''
+    try:
+        publicador = bs.find('div',{'class', 'title offerHeader'}).span.span.text
+    except (AttributeError, AttributeError):
+        publicador = bs.find('div',{'class', 'text'}).span.a.text
+    else:
         publicador = ''
-
-    spans = bs.find('ul',{'badges d-flex align-items-center flex-wrap'}).find_all('li')
-
+    try:
+        spans = bs.find('ul',{'badges d-flex align-items-center flex-wrap'}).find_all('li')
+    except Exception as e:
+        print(e)
+        print('no encuentra las etiquetas')
+        spans = []
     for i,span in enumerate(spans):
-        if span.text.strip().split()[0] == 'Región':
+        try:
+            badge = span.text.strip().split()[0]
+        except Exception as e:
+            print(e)
+            badge = ''    
+        if badge  == 'Región':
             index=i
-   
     # ubicación
     try:
         location= spans[index].text + ',' +spans[index+1].text
     except:
         location=''
-
+        
+    
     # modalidad
     modalidades=['Presencial','Mixta (Teletrabajo + Presencial)','Teletrabajo']
     modalidad = ''
@@ -360,18 +394,21 @@ def scrape(url, search_keyword):
     # inclusividad
     inclusividad = 'si' if bs.find_all('i', {'class', \
         'fa-solid fa-wheelchair-move'}) else 'no'
+    
     # salario
     try:
         salario = bs.find('h4',{'class','mb-0'}).text.strip()
     except:
         salario = ''
     # publicador
+    
     # extras
     try:
         etiquetas = [tag.text + '; ' for tag in spans]
     except:
         etiquetas = []
     etiquetas = ''.join(etiquetas)
+    
     
     csv_row = [ str(search_keyword),\
                 category.strip('\n'),\
