@@ -1,7 +1,7 @@
 """
 Version para realizar chequeo en el cambio de la pagina,
 
-se el quita el ciclo entre las paginas
+use el quita el ciclo entre las paginas
 """
 
 
@@ -141,12 +141,15 @@ def get_page_dynamic(url):
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        # espera hasta 1 seg a que aparesca un item de la página antes de extraer el html
+        # espera <5 seg a que aparesca un item de la página antes de extraer el html
         driver.get(url)
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, 'offerHeader')))
+        WebDriverWait(driver, 5)\
+                .until(EC.presence_of_element_located((By.ID, 'offerHeader')))
         html = driver.page_source
     except Exception as e:
         print(e)
+        WebDriverWait(driver, 5)
+        html = driver.page_source
     finally:
         driver.close()
     return BeautifulSoup(html, 'html.parser')
@@ -280,9 +283,10 @@ def scrape(url, search_keyword, save_row):
     # para la primera oferta, cambian un par de detalles
     try:
         title = bs.find('div',{'title offerHeader'}).find('h2').text
+    except AttributeError:
+        title = bs.find('div',{'text'}).h2.text
     except:
-        title = ''
-        
+        title = ''   
     try:
         body =  body_cleanser(bs.find('div',{'description text-break'}))
     except:

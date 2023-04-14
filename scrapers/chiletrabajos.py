@@ -273,7 +273,7 @@ def scrape(url, search_keyword):
     title = bs.find('h1').text
     
     # cuerpo
-    body =  body_cleanser(bs.find_all('p',{'class','mb-0'})[1])
+    body =  body_cleanser(bs.find_all('p',{'class','mb-0'}))
 
     # etiquetas con la informacion
     td_list = bs.find_all('td')

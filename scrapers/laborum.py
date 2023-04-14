@@ -120,6 +120,7 @@ def results(search_keyword):
                      re.sub('[\W+]', '', bs.find('h1').span.text))
     assert num_results != '', 'No se encontraron resultados'
     num_results = int(num_results)
+
     assert num_results != 0, 'No se encontraron resultados'
     
     # lista de avisos
@@ -130,6 +131,7 @@ def results(search_keyword):
         except:
             continue
     # filtro sólo los con titulo "h2"
+
     results = []
     results_dates = []
     listado_avisos = bs.find_all('div')[index]
@@ -141,7 +143,6 @@ def results(search_keyword):
             results_dates.append( get_date(aviso.find_all('h3')[1].text) )
         except :
             continue
-
     # variable auxiliar para cambiar páginas
     p = 1
     # resto de páginas
@@ -180,7 +181,7 @@ def results(search_keyword):
                 new_results.append(1) 
             except:
                 continue
-            
+           
     # fecha de la última vez que se ejecuto el main_scraper con este item
     try: 
        resume_date = load_date('laborum', search_keyword)
@@ -192,6 +193,7 @@ def results(search_keyword):
     retry_links_dates = []
     n = 0
     # raspado de resultados
+  
     for index, result_url in enumerate(results):
         time.sleep(np.random.uniform(-0.05,0.05)**2)
         date = results_dates[index]
@@ -202,9 +204,7 @@ def results(search_keyword):
             if not is_newer_date(date, resume_date) \
                 or str(url) in load_url('laborum', resume_date, search_keyword):
                 continue   
-    
             scrape(url, search_keyword)  
-            
             # recoleccion
             if str(date) == str(get_date('hoy')):
                 data_row = ['laborum',\
@@ -220,6 +220,7 @@ def results(search_keyword):
             retry_links_dates.append(date)
             continue
     failed_links = []
+    
     # intento de nuevo con los que no funcionaron
     for index, link in enumerate(retry_links):
         time.sleep(np.random.uniform(-0.05,0.05)**2)
@@ -246,7 +247,7 @@ def results(search_keyword):
             n += 1
         except:
             continue
-   
+  
     # guardo los links fallidos en otro csv
     for link in failed_links:
         csv_row=['laborum', search_keyword, link]
@@ -275,7 +276,6 @@ def scrape(url, search_keyword):
     None
 
     """
-
     try:    
         bs = get_page_dynamic(url)
     except:
@@ -285,23 +285,25 @@ def scrape(url, search_keyword):
         title = bs.find('h1').text
     except:
         print('error al extraer el título')
-    
     try:
         # los nombres de las clases variaban, ahora navega el \
         # sitio para rescatar la informacion
         section_detalle = bs.find('div',id='section-detalle')
+        up_table_section = [tag for tag in section_detalle.children][1]\
+            .div.div.div.div.div
+            
+        down_table_section =[tag for tag in section_detalle.children][1]
+        down_table_section =down_table_section.div.div.ul
         
-        table_section = [tag for tag in section_detalle.children][0] 
         body_section = [tag for tag in section_detalle.children][1]
-        
         corpus = body_section.find('div').find('div')
-
+        
         # cuerpo
         body =  body_cleanser(corpus)
         
-        table = table_section.find('div').find('div').find('div')
-        columns = [tag for tag in table.children]
-        
+        table = down_table_section
+        columns = [tag for tag in table.find_all('div')]
+        print(len(columns))
         col1 = columns[0].find_all('li')
         col2 = columns[1].find_all('li')
         try:
@@ -311,7 +313,6 @@ def scrape(url, search_keyword):
     except Exception as e:
         print(e)
         body = ''
-    
     # fecha
     date = get_date(col1[0].text)
 

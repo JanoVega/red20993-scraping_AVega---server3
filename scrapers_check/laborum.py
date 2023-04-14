@@ -233,17 +233,20 @@ def scrape(url, search_keyword, save_row):
         # sitio para rescatar la informacion
         section_detalle = bs.find('div',id='section-detalle')
         
-        table_section = [tag for tag in section_detalle.children][0] 
-        body_section = [tag for tag in section_detalle.children][1]
+        up_table_section = [tag for tag in section_detalle.children][1]\
+            .div.div.div.div.div
         
+        down_table_section =[tag for tag in section_detalle.children][1]
+        down_table_section =down_table_section.div.div.ul
+        
+        body_section = [tag for tag in section_detalle.children][1]
         corpus = body_section.find('div').find('div')
-
+        
         # cuerpo
         body =  body_cleanser(corpus)
         
-        table = table_section.find('div').find('div').find('div')
-        columns = [tag for tag in table.children]
-        
+        table = down_table_section
+        columns = [tag for tag in table.find_all('div')]
         col1 = columns[0].find_all('li')
         col2 = columns[1].find_all('li')
         try:

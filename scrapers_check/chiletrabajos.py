@@ -191,7 +191,7 @@ def scrape(url, search_keyword, save_row):
         
     # cuerpo
     try:
-        body = body_cleanser(bs.find_all('p',{'class','mb-0'})[1])
+        body = body_cleanser(bs.find_all('p',{'class','mb-0'}))
     except:
         body = ''
     # etiquetas con la informacion
